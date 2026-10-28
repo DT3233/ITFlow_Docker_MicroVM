@@ -1,0 +1,4 @@
+# ITFlow background jobs (same as the official install script)
+* * * * * www-data /usr/bin/php /var/www/itflow/cron/cron.php >/dev/null 2>&1
+# Backup check every hour; the script only makes a new backup if the last one is older than ~23h
+17 * * * * root /usr/local/bin/itflow-backup.sh >> /var/log/itflow-backup.log 2>&1
