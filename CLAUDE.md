@@ -103,6 +103,13 @@ CLAUDE.md                           This file
   **Tailscale traffic does not wake it.** Paused = no compute charge.
 - The DO endpoint requires a DO API token in the Authorization header, so it's not
   usable from a normal browser. Only the HTTP port is reachable during the preview.
+- **Runtime differs from Docker** (containerd, found 2026-10-30): `/dev` is a bare
+  tmpfs with no `/dev/fd` or `/dev/std*` links, and `/run` is an empty 64 MB tmpfs
+  that hides the image's `/run` (so `/var/lock -> /run/lock` dangles). The entrypoint
+  recreates these. Reproduce locally with `--tmpfs /run:rw,nosuid,size=65536k,mode=755`
+  and `rm -f /dev/fd /dev/std*` before running the entrypoint.
+- File transfer (`doctl compute microvm download/upload`) is disabled for the account;
+  `exec` and `console` work.
 - No swap; out-of-memory kills processes. Use 2 GB RAM or more.
 - Cron and backups only run while awake. The backup script is catch-up style for this.
 - A failed MicroVM cannot be recovered; delete it and create a new one.

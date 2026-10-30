@@ -33,6 +33,11 @@ exec 3>&1 4>&2
 exec > >(tee -a "$LOG") 2>&1
 echo "=== entrypoint start $(date -Is) uid=$(id -u) ==="
 
+# DO MicroVMs mount an empty tmpfs on /run, hiding the image's /run/lock, so
+# /var/lock (-> /run/lock) dangles. Recreate it as Debian ships it.
+mkdir -p /run/lock
+chmod 1777 /run/lock
+
 mkdir -p /run/mysqld /var/run/apache2 /var/lock/apache2 /var/run/tailscale /var/lib/tailscale /var/backups/itflow
 chown mysql:mysql /run/mysqld
 chmod 700 /var/lib/tailscale /var/backups/itflow
