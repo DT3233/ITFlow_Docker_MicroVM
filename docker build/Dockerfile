@@ -50,7 +50,11 @@ COPY itflow.cron /etc/cron.d/itflow
 COPY supervisord-itflow.conf /etc/supervisor/conf.d/itflow.conf
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY itflow-backup.sh /usr/local/bin/itflow-backup.sh
-RUN chmod 644 /etc/cron.d/itflow \
+# Strip Windows line endings in case the files were checked out as CRLF
+RUN sed -i 's/\r$//' /etc/cron.d/itflow /etc/supervisor/conf.d/itflow.conf \
+      /usr/local/bin/entrypoint.sh /usr/local/bin/itflow-backup.sh \
+      /etc/apache2/sites-available/itflow.conf \
+ && chmod 644 /etc/cron.d/itflow \
  && chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/itflow-backup.sh
 
 EXPOSE 80

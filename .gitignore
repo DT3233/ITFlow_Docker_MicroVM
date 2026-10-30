@@ -1,0 +1,13 @@
+# Windows "downloaded from the internet" markers
+*:Zone.Identifier
+
+# ITFlow data must never reach this public repo.
+# Backup archives from itflow-backup.sh (database dump, uploads, config.php)
+*.tar.gz
+*.tar.gz.part
+# Database dumps
+*.sql
+# ITFlow config (contains the database password)
+config.php
+# Uploaded client files, if ever copied off a VM
+uploads/
