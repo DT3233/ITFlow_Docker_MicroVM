@@ -6,8 +6,7 @@ Context for Claude Code working in this repo. Read this first every session.
 
 A single Docker image that runs **ITFlow** (open-source MSP platform: client assets,
 documentation, passwords, tickets, invoicing) on a **DigitalOcean MicroVM**, reached
-privately over **Tailscale**. Owner: Adrian, who runs a small MSP (one client now,
-a few more planned). The goal is cheap, pay-per-use hosting: the MicroVM bills per
+privately over **Tailscale**. Owner: Adrian, who runs a small MSP. The goal is cheap, pay-per-use hosting: the MicroVM bills per
 second only while running and pauses when idle.
 
 ## Working rules (important)
@@ -167,22 +166,18 @@ Dockerfile. Work from the clone inside WSL (`~/projects/...`), not `/mnt/c/...`.
   commit `304cd76`), so `ghcr.io/dt3233/itflow:304cd76` should exist. `.gitattributes`
   and the Dockerfile CRLF `sed` step were added after that.
 - Local Docker in Debian currently needs `sudo` (user not in the `docker` group).
-- **On the MicroVM it has failed twice.**
-  1. `workload container exited (code 1)`. That image predates the logging and
-     debug-hold changes, and was created with VPC networking.
-  2. Second attempt failed; the reason was not captured. Likely cause: no image
-     existed on ghcr.io yet (the workflow was empty) or the package was private.
-- **Next steps, in order:**
-  1. Push the latest commits to `main`; confirm the Actions run is green.
-  2. Make the `itflow` package public; verify with `docker logout ghcr.io` and an
-     anonymous `docker pull ghcr.io/dt3233/itflow:<short-sha>`.
-  3. Delete the old failed MicroVM (with approval). Create a new one with Public
-     networking and `ITFLOW_DEBUG_HOLD=1`.
-  4. If it fails, read `doctl compute microvm get <id>` and the entrypoint log to
-     find what differs from local Docker.
-- After it runs: Tailscale login and serve, ITFlow web setup, then confirm the VM
-  actually pauses when idle (Tailscale keepalives might keep it awake, which would
-  cost about $28/month instead of $1-3). Then set up copying backups off the VM.
+- **Runs on a MicroVM as of 2026-10-30** with image `8f88fe6` (MicroVM
+  `itflow-8f88fe6`, created with `ITFLOW_DEBUG_HOLD=1`). Earlier failures were the
+  missing `/dev/fd` and empty `/run` (see MicroVM constraints). The ghcr.io package
+  is public (verified with an anonymous pull).
+- Memory: our processes use ~275 MB, but the 2 GB VM reports only ~145 MB available
+  (the rest is outside the container). Watch for OOM; 4 GB is the fallback size.
+- Old MicroVMs `itflow-cf0a934-...` (failed) and `itflow-edd841c` (held, broken)
+  are left to delete.
+- **Next steps:** Tailscale login and serve (via console), ITFlow web setup, then
+  confirm the VM actually pauses when idle (Tailscale keepalives might keep it awake,
+  which would cost about $28/month instead of $1-3). Then set up copying backups off
+  the VM.
 
 ## Fallback
 
