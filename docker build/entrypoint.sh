@@ -7,14 +7,9 @@ APP=/var/www/itflow
 MARKER=/var/lib/itflow-init.done
 LOG=/var/log/itflow-entrypoint.log
 
-# Keep a copy of first-boot output inside the VM (DO has no log viewer).
-# fds 3/4 save the real stdout/stderr so supervisord's output is NOT tee'd later.
-exec 3>&1 4>&2
-exec > >(tee -a "$LOG") 2>&1
-echo "=== entrypoint start $(date -Is) uid=$(id -u) ==="
-
 # On any failure: report where, and if ITFLOW_DEBUG_HOLD=1, stay alive so you can
 # open a console (doctl compute microvm console <id>) and read $LOG.
+# Set up first, so the hold also covers the logging setup below.
 fail() {
     echo "ENTRYPOINT FAILED: $1" >&2
     if [ "${ITFLOW_DEBUG_HOLD:-0}" = "1" ]; then
@@ -24,6 +19,19 @@ fail() {
     exit 1
 }
 trap 'fail "line $LINENO: $BASH_COMMAND (exit $?)"' ERR
+
+# Docker always provides /dev/fd and /dev/std*, other runtimes may not. The log tee
+# below (process substitution) and supervisord's /dev/fd/1 log targets need them.
+[ -e /dev/fd ] || ln -s /proc/self/fd /dev/fd
+[ -e /dev/stdin ] || ln -s /proc/self/fd/0 /dev/stdin
+[ -e /dev/stdout ] || ln -s /proc/self/fd/1 /dev/stdout
+[ -e /dev/stderr ] || ln -s /proc/self/fd/2 /dev/stderr
+
+# Keep a copy of first-boot output inside the VM (DO has no log viewer).
+# fds 3/4 save the real stdout/stderr so supervisord's output is NOT tee'd later.
+exec 3>&1 4>&2
+exec > >(tee -a "$LOG") 2>&1
+echo "=== entrypoint start $(date -Is) uid=$(id -u) ==="
 
 mkdir -p /run/mysqld /var/run/apache2 /var/lock/apache2 /var/run/tailscale /var/lib/tailscale /var/backups/itflow
 chown mysql:mysql /run/mysqld
@@ -98,5 +106,16 @@ fi
 
 echo "=== starting supervisord $(date -Is) ==="
 trap - ERR
+
+# Debug hold also covers supervisord: run it as a child (output still tee'd to $LOG),
+# and if it exits, record the code and stay alive for the console.
+if [ "${ITFLOW_DEBUG_HOLD:-0}" = "1" ]; then
+    exec 3>&- 4>&-
+    rc=0
+    /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf || rc=$?
+    echo "supervisord exited with code $rc at $(date -Is); ITFLOW_DEBUG_HOLD=1: holding. Log: $LOG" >&2
+    exec sleep infinity
+fi
+
 exec 1>&3 2>&4 3>&- 4>&-
 exec /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
